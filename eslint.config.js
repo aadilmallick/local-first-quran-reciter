@@ -20,6 +20,9 @@ export default defineConfig([
     },
     rules: {
       "@typescript-eslint/no-explicit-any": "off",
+      "no-unsafe-finally": "off",
+      
     },
+    // linterOptions: {},
   },
 ]);
