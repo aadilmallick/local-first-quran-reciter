@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { AyahAudio } from "../types/quran";
 import { usePlaybackStore } from "../store/playbackStore";
 
@@ -27,9 +27,12 @@ export function useAudioPlayer(ayahs: AyahAudio[]): UseAudioPlayerResult {
   } = usePlaybackStore();
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  // How many times the current ayah has already played (0-based)
+  // Allowed initialization pattern: == null check during render
+  if (audioRef.current == null) {
+    audioRef.current = new Audio();
+  }
+
   const repeatCountRef = useRef(0);
-  // Whether we're in the inter-ayah pause window
   const isPausingRef = useRef(false);
   const pauseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -37,33 +40,31 @@ export function useAudioPlayer(ayahs: AyahAudio[]): UseAudioPlayerResult {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
 
-  // Always keep a stable ref to the latest ayahs/state for use inside callbacks
+  // Stable refs for use inside async callbacks — updated synchronously after every render
   const ayahsRef = useRef(ayahs);
-  ayahsRef.current = ayahs;
   const currentIndexRef = useRef(currentAyahIndex);
-  currentIndexRef.current = currentAyahIndex;
   const isLoopingRef = useRef(isLoopingRange);
-  isLoopingRef.current = isLoopingRange;
   const repeatEachRef = useRef(repeatEachAyah);
-  repeatEachRef.current = repeatEachAyah;
   const pauseMsRef = useRef(pauseBetweenAyahsMs);
-  pauseMsRef.current = pauseBetweenAyahsMs;
   const isPlayingRef = useRef(isPlaying);
-  isPlayingRef.current = isPlaying;
 
-  // Create the audio element once
-  if (!audioRef.current) {
-    audioRef.current = new Audio();
-  }
+  useLayoutEffect(() => {
+    ayahsRef.current = ayahs;
+    currentIndexRef.current = currentAyahIndex;
+    isLoopingRef.current = isLoopingRange;
+    repeatEachRef.current = repeatEachAyah;
+    pauseMsRef.current = pauseBetweenAyahsMs;
+    isPlayingRef.current = isPlaying;
+  });
 
-  // Sync playback rate whenever it changes
   useEffect(() => {
     if (audioRef.current) {
       audioRef.current.playbackRate = playbackRate;
     }
   }, [playbackRate]);
 
-  // Load the correct audio source whenever the current ayah index or ayahs array changes
+  // Load the correct audio source whenever the current ayah or ayahs array changes.
+  // currentTime/duration resets are handled by the loadstart event listener below.
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio || ayahs.length === 0) return;
@@ -76,8 +77,6 @@ export function useAudioPlayer(ayahs: AyahAudio[]): UseAudioPlayerResult {
     audio.src = ayah.audioUrl;
     audio.playbackRate = playbackRate;
     audio.load();
-    setCurrentTime(0);
-    setDuration(0);
 
     if (wasPlaying) {
       audio.play().catch(() => setIsPlaying(false));
@@ -85,13 +84,11 @@ export function useAudioPlayer(ayahs: AyahAudio[]): UseAudioPlayerResult {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentAyahIndex, ayahs]);
 
-  // Advance to the next ayah or loop/stop
   const advanceAyah = useCallback(() => {
-    const ayahs = ayahsRef.current;
+    const currentAyahs = ayahsRef.current;
     const index = currentIndexRef.current;
 
-    if (index >= ayahs.length - 1) {
-      // Reached the end of the range
+    if (index >= currentAyahs.length - 1) {
       if (isLoopingRef.current) {
         repeatCountRef.current = 0;
         setCurrentAyahIndex(0);
@@ -105,14 +102,12 @@ export function useAudioPlayer(ayahs: AyahAudio[]): UseAudioPlayerResult {
     }
   }, [setCurrentAyahIndex, setIsPlaying]);
 
-  // Wire up audio event listeners — re-run only when advanceAyah changes (i.e., never)
   useEffect(() => {
     const audio = audioRef.current!;
 
     const onEnded = () => {
       if (isPausingRef.current) return;
 
-      // Repeat the same ayah if we haven't hit the repeat count
       if (repeatCountRef.current < repeatEachRef.current - 1) {
         repeatCountRef.current += 1;
         audio.currentTime = 0;
@@ -120,7 +115,6 @@ export function useAudioPlayer(ayahs: AyahAudio[]): UseAudioPlayerResult {
         return;
       }
 
-      // Move to the next ayah, with optional pause
       repeatCountRef.current = 0;
       if (pauseMsRef.current > 0) {
         isPausingRef.current = true;
@@ -133,6 +127,11 @@ export function useAudioPlayer(ayahs: AyahAudio[]): UseAudioPlayerResult {
       }
     };
 
+    // Reset progress display when a new source starts loading
+    const onLoadStart = () => {
+      setCurrentTime(0);
+      setDuration(0);
+    };
     const onWaiting = () => setIsBuffering(true);
     const onCanPlay = () => setIsBuffering(false);
     const onTimeUpdate = () => setCurrentTime(audio.currentTime);
@@ -143,6 +142,7 @@ export function useAudioPlayer(ayahs: AyahAudio[]): UseAudioPlayerResult {
     };
 
     audio.addEventListener("ended", onEnded);
+    audio.addEventListener("loadstart", onLoadStart);
     audio.addEventListener("waiting", onWaiting);
     audio.addEventListener("canplay", onCanPlay);
     audio.addEventListener("timeupdate", onTimeUpdate);
@@ -151,6 +151,7 @@ export function useAudioPlayer(ayahs: AyahAudio[]): UseAudioPlayerResult {
 
     return () => {
       audio.removeEventListener("ended", onEnded);
+      audio.removeEventListener("loadstart", onLoadStart);
       audio.removeEventListener("waiting", onWaiting);
       audio.removeEventListener("canplay", onCanPlay);
       audio.removeEventListener("timeupdate", onTimeUpdate);
@@ -159,7 +160,6 @@ export function useAudioPlayer(ayahs: AyahAudio[]): UseAudioPlayerResult {
     };
   }, [advanceAyah, setIsPlaying]);
 
-  // Cleanup pause timer on unmount
   useEffect(() => {
     return () => {
       if (pauseTimerRef.current) clearTimeout(pauseTimerRef.current);
@@ -172,7 +172,6 @@ export function useAudioPlayer(ayahs: AyahAudio[]): UseAudioPlayerResult {
     const ayah = ayahsRef.current[currentIndexRef.current];
     if (!ayah) return;
 
-    // If the audio has no src yet (first load or stopped), set it
     if (!audio.src || audio.src !== ayah.audioUrl) {
       audio.src = ayah.audioUrl;
       audio.playbackRate = playbackRate;
@@ -217,8 +216,7 @@ export function useAudioPlayer(ayahs: AyahAudio[]): UseAudioPlayerResult {
     if (pauseTimerRef.current) clearTimeout(pauseTimerRef.current);
     isPausingRef.current = false;
     repeatCountRef.current = 0;
-    const index = currentIndexRef.current;
-    setCurrentAyahIndex(Math.max(0, index - 1));
+    setCurrentAyahIndex(Math.max(0, currentIndexRef.current - 1));
   }, [setCurrentAyahIndex]);
 
   const setCurrentIndex = useCallback(

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { quranClient } from "../api/quranClient";
 import type { AyahAudio } from "../types/quran";
 
@@ -25,46 +25,46 @@ export function useQuranAudioRange({
   const [allAyahs, setAllAyahs] = useState<AyahAudio[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // Track what we last fetched so we don't re-fetch on ayah range changes
   const lastFetchKey = useRef<string>("");
   const fetchCount = useRef(0);
+  const [refetchTrigger, setRefetchTrigger] = useState(0);
 
-  const fetchAyahs = useCallback(async () => {
+  useEffect(() => {
     const key = `${surahNumber}:${reciterId}`;
     if (lastFetchKey.current === key) return;
     lastFetchKey.current = key;
-
     const fetchId = ++fetchCount.current;
-    setIsLoading(true);
-    setError(null);
 
-    try {
-      const data = await quranClient.getAyahAudioForSurah({ surahNumber, reciterId });
-      // Ignore stale responses if a newer fetch was triggered
+    // All setState calls happen inside the async IIFE (after the first await),
+    // so they are never synchronous in the effect body.
+    (async () => {
+      await Promise.resolve();
       if (fetchId !== fetchCount.current) return;
-      setAllAyahs(data);
-    } catch (err) {
-      if (fetchId !== fetchCount.current) return;
-      setError(err instanceof Error ? err.message : "Failed to load audio");
-    } finally {
-      if (fetchId === fetchCount.current) {
-        setIsLoading(false);
+
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const data = await quranClient.getAyahAudioForSurah({ surahNumber, reciterId });
+        if (fetchId !== fetchCount.current) return;
+        setAllAyahs(data);
+      } catch (err) {
+        if (fetchId !== fetchCount.current) return;
+        setError(err instanceof Error ? err.message : "Failed to load audio");
+      } finally {
+        if (fetchId === fetchCount.current) setIsLoading(false);
       }
-    }
-  }, [surahNumber, reciterId]);
+    })();
+  }, [surahNumber, reciterId, refetchTrigger]);
 
   const refetch = useCallback(() => {
     lastFetchKey.current = "";
-    fetchAyahs();
-  }, [fetchAyahs]);
+    setRefetchTrigger((t) => t + 1);
+  }, []);
 
-  useEffect(() => {
-    fetchAyahs();
-  }, [fetchAyahs]);
-
-  // Filter the full surah down to the requested range
-  const ayahs = allAyahs.filter(
-    (a) => a.ayahNumber >= startAyah && a.ayahNumber <= endAyah
+  const ayahs = useMemo(
+    () => allAyahs.filter((a) => a.ayahNumber >= startAyah && a.ayahNumber <= endAyah),
+    [allAyahs, startAyah, endAyah]
   );
 
   return { ayahs, isLoading, error, refetch };

@@ -29,8 +29,15 @@ export function useSavedLoops() {
 
   const saveLoop = useCallback(
     (name: string) => {
-      const { selectedSurah, selectedReciter, startAyah, endAyah, repeatEachAyah, pauseBetweenAyahsMs, playbackRate } =
-        store;
+      const {
+        selectedSurah,
+        selectedReciter,
+        startAyah,
+        endAyah,
+        repeatEachAyah,
+        pauseBetweenAyahsMs,
+        playbackRate,
+      } = store;
       const now = new Date().toISOString();
       const newLoop: SavedLoop = {
         id: crypto.randomUUID(),
@@ -51,35 +58,42 @@ export function useSavedLoops() {
       writeLoops(updated);
       setLoops(updated);
     },
-    [loops, store]
+    [loops, store],
   );
 
   const updateLoop = useCallback(
     (id: string, name: string) => {
-      const { selectedSurah, selectedReciter, startAyah, endAyah, repeatEachAyah, pauseBetweenAyahsMs, playbackRate } =
-        store;
+      const {
+        selectedSurah,
+        selectedReciter,
+        startAyah,
+        endAyah,
+        repeatEachAyah,
+        pauseBetweenAyahsMs,
+        playbackRate,
+      } = store;
       const updated = loops.map((l) =>
         l.id === id
           ? {
-              ...l,
-              name,
-              surahNumber: selectedSurah.number,
-              surahNameEnglish: selectedSurah.nameEnglish,
-              startAyah,
-              endAyah,
-              reciterId: selectedReciter.id,
-              reciterName: selectedReciter.name,
-              repeatEachAyah,
-              pauseBetweenAyahsMs,
-              playbackRate,
-              updatedAt: new Date().toISOString(),
-            }
+            ...l,
+            name,
+            surahNumber: selectedSurah.number,
+            surahNameEnglish: selectedSurah.nameEnglish,
+            startAyah,
+            endAyah,
+            reciterId: selectedReciter.id,
+            reciterName: selectedReciter.name,
+            repeatEachAyah,
+            pauseBetweenAyahsMs,
+            playbackRate,
+            updatedAt: new Date().toISOString(),
+          }
           : l
       );
       writeLoops(updated);
       setLoops(updated);
     },
-    [loops, store]
+    [loops, store],
   );
 
   const deleteLoop = useCallback(
@@ -88,16 +102,19 @@ export function useSavedLoops() {
       writeLoops(updated);
       setLoops(updated);
     },
-    [loops]
+    [loops],
   );
 
   const loadLoop = useCallback(
     (loop: SavedLoop) => {
-      const surah: Surah | undefined = SURAHS.find((s) => s.number === loop.surahNumber);
+      const surah: Surah | undefined = SURAHS.find((s) =>
+        s.number === loop.surahNumber
+      );
       const reciter = RECITERS.find((r) => r.id === loop.reciterId);
       if (!surah || !reciter) return;
 
       const clamped = clampAyahRange(surah, loop.startAyah, loop.endAyah);
+      console.log("playing saved loop", loop, clamped);
       store.setSelectedSurah(surah);
       // Small timeout so setSelectedSurah's range reset doesn't overwrite
       setTimeout(() => {
@@ -108,7 +125,7 @@ export function useSavedLoops() {
         store.setPlaybackRate(loop.playbackRate);
       }, 0);
     },
-    [store]
+    [store],
   );
 
   return { loops, saveLoop, updateLoop, deleteLoop, loadLoop };

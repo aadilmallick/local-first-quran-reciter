@@ -52,7 +52,8 @@ export async function getAyahAudioForSurah({
   } catch (err) {
     // If this throws with a CORS or network error, add a proxy prefix to BASE_URL above.
     throw new Error(
-      `Failed to fetch audio for surah ${surahNumber}: ${err instanceof Error ? err.message : String(err)}`
+      `Failed to fetch audio for surah ${surahNumber}: ${err instanceof Error ? err.message : String(err)}`,
+      { cause: err }
     );
   }
 
