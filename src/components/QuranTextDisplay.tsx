@@ -1,6 +1,13 @@
 import { useRef, useEffect } from "react";
 import type { AyahAudio } from "../types/quran";
 import { usePlaybackStore } from "../store/playbackStore";
+import { useUiSettings } from "../contexts/UiSettingsContext";
+
+const ARABIC_SIZE: Record<string, string> = {
+  small: "text-2xl",
+  medium: "text-3xl",
+  large: "text-4xl",
+};
 
 interface Props {
   ayahs: AyahAudio[];
@@ -10,6 +17,7 @@ interface Props {
 
 export function QuranTextDisplay({ ayahs, isLoading, error }: Props) {
   const { currentAyahIndex, showArabic, showTranslation } = usePlaybackStore();
+  const { arabicFontSize } = useUiSettings();
   const activeRef = useRef<HTMLDivElement | null>(null);
 
   // Scroll the highlighted ayah into view
@@ -80,7 +88,7 @@ export function QuranTextDisplay({ ayahs, isLoading, error }: Props) {
             {showArabic && (
               <p
                 dir="rtl"
-                className={`text-2xl leading-loose font-serif text-right mb-3 ${
+                className={`${ARABIC_SIZE[arabicFontSize]} leading-loose font-serif text-right mb-3 ${
                   isActive ? "text-emerald-900" : "text-stone-800"
                 }`}
               >

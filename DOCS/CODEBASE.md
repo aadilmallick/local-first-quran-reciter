@@ -16,13 +16,17 @@ src/
 │   ├── reciters.ts   # Static list of 4 reciters
 │   └── surahs.ts     # Static list of all 114 surahs
 ├── components/       # UI components
+│   └── ui/           # shadcn-generated components (button, dialog, tabs, select)
+├── contexts/
+│   └── UiSettingsContext.tsx   # React context for UI preferences (font size, etc.)
 ├── hooks/            # Custom React hooks
 ├── lib/
 │   └── LocalStorageBrowser.ts  # Generic typed localStorage wrapper (pre-existing)
 ├── store/
 │   └── playbackStore.ts        # Zustand global state
 ├── types/
-│   └── quran.ts      # All shared TypeScript types
+│   ├── quran.ts      # All shared TypeScript types
+│   └── settings.ts   # UI settings types (ArabicFontSize, UiSettings)
 └── utils/
     ├── quran.ts      # Formatting + clamping helpers
     └── storage.ts    # Typed localStorage instances
@@ -30,7 +34,7 @@ src/
 
 ---
 
-## Types (`src/types/quran.ts`)
+## Types (`src/types/quran.ts` and `src/types/settings.ts`)
 
 ```ts
 type Reciter = {
@@ -82,6 +86,17 @@ type UserPreferences = {
   showArabic: boolean;
   showTranslation: boolean;
   volume: number;        // float [0, 1]; defaults to 1 for old prefs without this field
+  playBismillah?: boolean;
+};
+```
+
+`src/types/settings.ts` holds UI-only preferences that are unrelated to Quran data:
+
+```ts
+type ArabicFontSize = "small" | "medium" | "large";
+
+type UiSettings = {
+  arabicFontSize: ArabicFontSize;  // maps to text-2xl / text-3xl / text-4xl
 };
 ```
 
@@ -300,7 +315,17 @@ Skips handling when the focused element is an `INPUT`, `SELECT`, or `TEXTAREA`. 
 
 ### `useLocalStorage` (`src/hooks/useLocalStorage.ts`)
 
-Generic hook wrapping `LocalStorageBrowser` with `useState` for reactive reads. Not used directly by the main app flow (store handles persistence internally), but available for simpler use cases.
+Generic hook wrapping `LocalStorageBrowser` with `useState` for reactive reads.
+
+```ts
+function useLocalStorage<T extends Record<string, unknown>, K extends keyof T & string>(
+  storage: LocalStorageBrowser<T>,
+  key: K,
+  defaultValue: T[K]
+): [T[K], (value: T[K]) => void, () => void]
+```
+
+Used by `UiSettingsContext` to back display preferences with localStorage. The playback store manages its own persistence directly (no hook needed there); `useLocalStorage` is for contexts or components that want reactive localStorage without Zustand.
 
 ---
 
@@ -354,7 +379,11 @@ Props: `loops`, `onLoad`, `onDelete` — all lifted from `App.tsx` via `useSaved
 
 ### `QuranTextDisplay`
 
-Renders all loaded ayahs as cards. The active ayah (`currentAyahIndex`) gets an emerald highlight and scrolls into view via `scrollIntoView({ behavior: "smooth" })`. Arabic text is rendered `dir="rtl"` in a large serif font. Shows graceful fallbacks for missing Arabic text or translation.
+Renders all loaded ayahs as cards. The active ayah (`currentAyahIndex`) gets an emerald highlight and scrolls into view via `scrollIntoView({ behavior: "smooth" })`. Arabic text is rendered `dir="rtl"` in a serif font whose size is driven by `arabicFontSize` from `useUiSettings` (`text-2xl` / `text-3xl` / `text-4xl`). Shows graceful fallbacks for missing Arabic text or translation.
+
+### `SettingsDialog`
+
+See the dedicated section below (under **shadcn Components**).
 
 ---
 
@@ -371,12 +400,66 @@ Renders all loaded ayahs as cards. The active ayah (`currentAyahIndex`) gets an 
 
 ### `src/utils/storage.ts`
 
-Two typed `LocalStorageBrowser` instances:
+Three typed `LocalStorageBrowser` instances:
 
 ```ts
-savedLoopsStorage  // key: "quran_memorizer_saved_loops" → SavedLoop[]
-prefsStorage       // key: "quran_memorizer_preferences" → UserPreferences
+savedLoopsStorage   // key: "quran_memorizer_saved_loops"      → SavedLoop[]
+prefsStorage        // key: "quran_memorizer_preferences"      → UserPreferences
+uiSettingsStorage   // key: "quran_memorizer_ui_settings"      → UiSettings
 ```
+
+`uiSettingsStorage` is consumed exclusively by `UiSettingsContext` via the `useLocalStorage` hook — not by the Zustand store. Add new UI-preference keys to `UiSettings` (in `src/types/settings.ts`) and handle them inside the context.
+
+---
+
+## UI Settings Context (`src/contexts/UiSettingsContext.tsx`)
+
+React context that owns all display preferences that live outside the Zustand playback store. Uses `useLocalStorage` internally so state is reactive within the session and automatically persisted to `uiSettingsStorage`.
+
+```ts
+// Provider — wrap the app root with this (already done in main.tsx)
+function UiSettingsProvider({ children }: { children: ReactNode }): JSX.Element
+
+// Hook — call in any component under the provider
+function useUiSettings(): {
+  arabicFontSize: ArabicFontSize;
+  setArabicFontSize: (size: ArabicFontSize) => void;
+}
+```
+
+**Why a context instead of Zustand?** The UI settings don't interact with audio playback at all. Keeping them in a separate context avoids polluting the playback store and makes the dependency clear: components that only care about display can import from the context without touching audio state.
+
+**Adding a new setting:** add the field to `UiSettings` in `src/types/settings.ts`, add state + setter to the provider, expose via the `useUiSettings` return value.
+
+---
+
+## shadcn Components (`src/components/ui/`)
+
+Installed via `npx shadcn@latest` (CLI v4) using **Base UI** primitives (`@base-ui/react`) for Tailwind v4 compatibility. Components are source-owned — edit them directly if behaviour needs to change.
+
+| File | Primitives used |
+|------|-----------------|
+| `button.tsx` | `@base-ui/react/button` + `cva` |
+| `dialog.tsx` | `@base-ui/react/dialog` |
+| `tabs.tsx` | `@base-ui/react/tabs` + `cva` |
+| `select.tsx` | `@base-ui/react/select` |
+
+**Path alias:** `@/` resolves to `src/` (configured in `tsconfig.app.json` and `vite.config.ts`). Required by shadcn's generated imports (`@/lib/utils`, `@/components/ui/...`).
+
+---
+
+## `SettingsDialog` (`src/components/SettingsDialog.tsx`)
+
+Gear-icon button in the navbar that opens a wide (`max-w-2xl`) modal with a sidebar-style navigation layout.
+
+- Left panel (`w-52`, stone-50): vertical `TabsList` acting as a category sidebar
+- Right panel: scrollable `TabsContent` area per category
+- Uses `Tabs orientation="vertical"` from shadcn — triggers are full-width, left-aligned, with active-state highlight
+
+To add a new settings category:
+1. Add an entry to the `NAV_ITEMS` array (value, label, lucide icon)
+2. Add a corresponding `<TabsContent value="...">` block with the settings controls
+3. Wire any new preference fields through `useUiSettings` (or a new context if the domain is unrelated to display)
 
 ---
 

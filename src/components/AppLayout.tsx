@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { SettingsDialog } from "./SettingsDialog";
 
 interface Props {
   selectionPanel: ReactNode;
@@ -21,6 +22,9 @@ export function AppLayout({ selectionPanel, controlsPanel, loopsPanel, textDispl
               Quran Loop Memorizer
             </h1>
             <p className="text-xs text-stone-400">Select · Loop · Memorize</p>
+          </div>
+          <div className="ml-auto">
+            <SettingsDialog />
           </div>
         </div>
       </header>
