@@ -11,9 +11,11 @@ import { MemorizationControls } from "./components/MemorizationControls";
 import { QuranTextDisplay } from "./components/QuranTextDisplay";
 import { CurrentLoopCard } from "./components/CurrentLoopCard";
 import { SavedLoopsPanel } from "./components/SavedLoopsPanel";
+import { useKeepAwake } from "./hooks/useKeepAwake";
 
 export default function App() {
-  const { selectedSurah, selectedReciter, startAyah, endAyah } = usePlaybackStore();
+  const { selectedSurah, selectedReciter, startAyah, endAyah } =
+    usePlaybackStore();
 
   const { ayahs, isLoading, error, refetch } = useQuranAudioRange({
     surahNumber: selectedSurah.number,
@@ -24,6 +26,7 @@ export default function App() {
 
   const player = useAudioPlayer(ayahs);
   const { loops, saveLoop, deleteLoop, loadLoop } = useSavedLoops();
+  useKeepAwake();
 
   return (
     <AppLayout
@@ -52,7 +55,11 @@ export default function App() {
         </>
       }
       loopsPanel={
-        <SavedLoopsPanel loops={loops} onLoad={loadLoop} onDelete={deleteLoop} />
+        <SavedLoopsPanel
+          loops={loops}
+          onLoad={loadLoop}
+          onDelete={deleteLoop}
+        />
       }
       textDisplay={
         <QuranTextDisplay ayahs={ayahs} isLoading={isLoading} error={error} />

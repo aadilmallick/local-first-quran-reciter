@@ -26,11 +26,23 @@ export class KeepAwake {
         }
     }
 
-    release() {
+    private release() {
         this.wakeLock?.release();
         setTimeout(() => {
             this.wakeLock = undefined;
         }, 250);
+    }
+
+    static isAPIAvailable() {
+        return (
+            navigator.wakeLock &&
+            typeof navigator.wakeLock.request === "function"
+        );
+    }
+
+    async activate() {
+        await this.request();
+        this.keepAwake();
     }
 
     // when dcoument is visible, request wakelock
