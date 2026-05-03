@@ -70,25 +70,25 @@ export function AudioControls({ player, totalAyahs }: Props) {
       {/* Main controls */}
       <div className="flex items-center justify-center gap-3">
         <button
-          onClick={prevAyah}
+          onClick={(e) => { prevAyah(); e.currentTarget.blur(); }}
           disabled={totalAyahs === 0}
           className="p-2 rounded-full text-stone-500 hover:bg-stone-100 disabled:opacity-30 transition-colors"
-          title="Previous ayah"
+          title="Previous ayah (←)"
         >
           <SkipBack size={20} />
         </button>
 
         <button
-          onClick={isPlaying ? pause : play}
+          onClick={(e) => { isPlaying ? pause() : play(); e.currentTarget.blur(); }}
           disabled={totalAyahs === 0}
           className="p-3 rounded-full bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-30 shadow-md transition-colors"
-          title={isPlaying ? "Pause" : "Play"}
+          title={isPlaying ? "Pause (Space)" : "Play (Space)"}
         >
           {isPlaying ? <Pause size={22} /> : <Play size={22} />}
         </button>
 
         <button
-          onClick={stop}
+          onClick={(e) => { stop(); e.currentTarget.blur(); }}
           disabled={totalAyahs === 0}
           className="p-2 rounded-full text-stone-500 hover:bg-stone-100 disabled:opacity-30 transition-colors"
           title="Stop"
@@ -97,16 +97,16 @@ export function AudioControls({ player, totalAyahs }: Props) {
         </button>
 
         <button
-          onClick={nextAyah}
+          onClick={(e) => { nextAyah(); e.currentTarget.blur(); }}
           disabled={totalAyahs === 0}
           className="p-2 rounded-full text-stone-500 hover:bg-stone-100 disabled:opacity-30 transition-colors"
-          title="Next ayah"
+          title="Next ayah (→)"
         >
           <SkipForward size={20} />
         </button>
 
         <button
-          onClick={toggleLoop}
+          onClick={(e) => { toggleLoop(); e.currentTarget.blur(); }}
           className={`p-2 rounded-full transition-colors ${
             isLoopingRange
               ? "bg-emerald-100 text-emerald-700"

@@ -8,7 +8,8 @@ interface Props {
 }
 
 export function CurrentLoopCard({ onSave }: Props) {
-  const { selectedSurah, selectedReciter, startAyah, endAyah } = usePlaybackStore();
+  const { selectedSurah, selectedReciter, startAyah, endAyah } =
+    usePlaybackStore();
   const [saving, setSaving] = useState(false);
   const [loopName, setLoopName] = useState("");
 
@@ -27,12 +28,16 @@ export function CurrentLoopCard({ onSave }: Props) {
         <div>
           <h3 className="font-semibold text-stone-800 text-base">
             {selectedSurah.nameEnglish}
-            <span className="ml-2 text-stone-400 text-sm font-normal">{selectedSurah.nameArabic}</span>
+            <span className="ml-2 text-stone-400 text-sm font-normal">
+              {selectedSurah.nameArabic}
+            </span>
           </h3>
           <p className="text-sm text-emerald-700 font-medium">
             {defaultName}
           </p>
-          <p className="text-xs text-stone-400 mt-0.5">{selectedReciter.name}</p>
+          <p className="text-xs text-stone-400 mt-0.5">
+            {selectedReciter.name}
+          </p>
         </div>
         <button
           onClick={() => setSaving(!saving)}
@@ -50,8 +55,14 @@ export function CurrentLoopCard({ onSave }: Props) {
             type="text"
             placeholder={defaultName}
             value={loopName}
-            onChange={(e) => setLoopName(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSave()}
+            onChange={(e) => {
+              setLoopName(e.target.value);
+            }}
+            onKeyDown={(e) => {
+              e.stopPropagation();
+              if (e.key === "Enter") handleSave();
+              if (e.key === "Escape") setSaving(false);
+            }}
             className="flex-1 px-3 py-1.5 rounded-lg border border-emerald-300 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-white"
           />
           <button
@@ -61,7 +72,10 @@ export function CurrentLoopCard({ onSave }: Props) {
             Save
           </button>
           <button
-            onClick={() => { setSaving(false); setLoopName(""); }}
+            onClick={() => {
+              setSaving(false);
+              setLoopName("");
+            }}
             className="px-3 py-1.5 rounded-lg bg-stone-100 text-stone-500 text-sm hover:bg-stone-200 transition-colors"
           >
             Cancel

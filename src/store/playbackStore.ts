@@ -19,6 +19,7 @@ interface PlaybackState {
   volume: number;
   showArabic: boolean;
   showTranslation: boolean;
+  playBismillah: boolean;
 }
 
 interface PlaybackActions {
@@ -34,6 +35,7 @@ interface PlaybackActions {
   setVolume: (volume: number) => void;
   toggleShowArabic: () => void;
   toggleShowTranslation: () => void;
+  togglePlayBismillah: () => void;
   loadPreferences: (prefs: Partial<UserPreferences>) => void;
 }
 
@@ -50,6 +52,7 @@ function loadSavedPrefs(): Partial<PlaybackState> {
       showArabic: prefs.showArabic,
       showTranslation: prefs.showTranslation,
       volume: prefs.volume ?? 1,
+      playBismillah: prefs.playBismillah ?? false,
     };
   } catch {
     return {};
@@ -74,6 +77,7 @@ export const usePlaybackStore = create<PlaybackState & PlaybackActions>(
     volume: 1,
     showArabic: true,
     showTranslation: true,
+    playBismillah: false,
     ...loadSavedPrefs(),
 
     setSelectedSurah: (surah) => {
@@ -134,6 +138,11 @@ export const usePlaybackStore = create<PlaybackState & PlaybackActions>(
       persistPrefs(get());
     },
 
+    togglePlayBismillah: () => {
+      set((s) => ({ playBismillah: !s.playBismillah }));
+      persistPrefs(get());
+    },
+
     loadPreferences: (prefs) => {
       const reciter = prefs.reciterId
         ? RECITERS.find((r) => r.id === prefs.reciterId)
@@ -161,6 +170,7 @@ function persistPrefs(state: PlaybackState) {
       showArabic: state.showArabic,
       showTranslation: state.showTranslation,
       volume: state.volume,
+      playBismillah: state.playBismillah,
     });
   } catch {
     // localStorage unavailable — silently skip

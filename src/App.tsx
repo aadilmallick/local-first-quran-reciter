@@ -12,6 +12,7 @@ import { QuranTextDisplay } from "./components/QuranTextDisplay";
 import { CurrentLoopCard } from "./components/CurrentLoopCard";
 import { SavedLoopsPanel } from "./components/SavedLoopsPanel";
 import { useKeepAwake } from "./hooks/useKeepAwake";
+import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 
 export default function App() {
   const { selectedSurah, selectedReciter, startAyah, endAyah } =
@@ -27,6 +28,7 @@ export default function App() {
   const player = useAudioPlayer(ayahs);
   const { loops, saveLoop, deleteLoop, loadLoop } = useSavedLoops();
   useKeepAwake();
+  useKeyboardShortcuts(player, ayahs.length);
 
   return (
     <AppLayout

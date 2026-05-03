@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { AyahAudio } from "../types/quran";
 import { usePlaybackStore } from "../store/playbackStore";
+import bismillahUrl from "../assets/Bismillah.mp3";
 
 export interface UseAudioPlayerResult {
   play: () => void;
@@ -23,6 +24,7 @@ export function useAudioPlayer(ayahs: AyahAudio[]): UseAudioPlayerResult {
     pauseBetweenAyahsMs,
     playbackRate,
     volume,
+    playBismillah,
     setCurrentAyahIndex,
     setIsPlaying,
   } = usePlaybackStore();
@@ -32,6 +34,9 @@ export function useAudioPlayer(ayahs: AyahAudio[]): UseAudioPlayerResult {
   if (audioRef.current == null) {
     audioRef.current = new Audio();
   }
+
+  const bismillahAudioRef = useRef(new Audio(bismillahUrl));
+  const isBismillahPlayingRef = useRef(false);
 
   const repeatCountRef = useRef(0);
   const isPausingRef = useRef(false);
@@ -48,6 +53,7 @@ export function useAudioPlayer(ayahs: AyahAudio[]): UseAudioPlayerResult {
   const repeatEachRef = useRef(repeatEachAyah);
   const pauseMsRef = useRef(pauseBetweenAyahsMs);
   const isPlayingRef = useRef(isPlaying);
+  const playBismillahRef = useRef(playBismillah);
 
   useLayoutEffect(() => {
     ayahsRef.current = ayahs;
@@ -56,6 +62,7 @@ export function useAudioPlayer(ayahs: AyahAudio[]): UseAudioPlayerResult {
     repeatEachRef.current = repeatEachAyah;
     pauseMsRef.current = pauseBetweenAyahsMs;
     isPlayingRef.current = isPlaying;
+    playBismillahRef.current = playBismillah;
   });
 
   useEffect(() => {
@@ -65,9 +72,8 @@ export function useAudioPlayer(ayahs: AyahAudio[]): UseAudioPlayerResult {
   }, [playbackRate]);
 
   useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = volume;
-    }
+    if (audioRef.current) audioRef.current.volume = volume;
+    bismillahAudioRef.current.volume = volume;
   }, [volume]);
 
   // Load the correct audio source whenever the current ayah or ayahs array changes.
@@ -92,6 +98,26 @@ export function useAudioPlayer(ayahs: AyahAudio[]): UseAudioPlayerResult {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentAyahIndex, ayahs]);
 
+  const playBismillahThen = (onDone: () => void) => {
+    const bismillah = bismillahAudioRef.current;
+    bismillah.pause();
+    bismillah.currentTime = 0;
+    bismillah.volume = audioRef.current?.volume ?? 1;
+    isBismillahPlayingRef.current = true;
+
+    const onEnded = () => {
+      isBismillahPlayingRef.current = false;
+      bismillah.removeEventListener("ended", onEnded);
+      onDone();
+    };
+    bismillah.addEventListener("ended", onEnded);
+    bismillah.play().catch(() => {
+      bismillah.removeEventListener("ended", onEnded);
+      isBismillahPlayingRef.current = false;
+      onDone();
+    });
+  };
+
   const advanceAyah = useCallback(() => {
     const currentAyahs = ayahsRef.current;
     const index = currentIndexRef.current;
@@ -99,7 +125,24 @@ export function useAudioPlayer(ayahs: AyahAudio[]): UseAudioPlayerResult {
     if (index >= currentAyahs.length - 1) {
       if (isLoopingRef.current) {
         repeatCountRef.current = 0;
-        setCurrentAyahIndex(0);
+        if (playBismillahRef.current) {
+          playBismillahThen(() => {
+            const ayah = ayahsRef.current[0];
+            const audio = audioRef.current!;
+            if (ayah) {
+              if (audio.src !== ayah.audioUrl) {
+                audio.src = ayah.audioUrl;
+                audio.load();
+              } else {
+                audio.currentTime = 0;
+              }
+              audio.play().catch(() => setIsPlaying(false));
+            }
+            setCurrentAyahIndex(0);
+          });
+        } else {
+          setCurrentAyahIndex(0);
+        }
       } else {
         setIsPlaying(false);
         setCurrentAyahIndex(0);
@@ -187,10 +230,22 @@ export function useAudioPlayer(ayahs: AyahAudio[]): UseAudioPlayerResult {
       audio.load();
     }
 
-    audio.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
+    setIsPlaying(true);
+
+    if (currentIndexRef.current === 0 && playBismillahRef.current) {
+      playBismillahThen(() => {
+        audio.play().catch(() => setIsPlaying(false));
+      });
+    } else {
+      audio.play().catch(() => setIsPlaying(false));
+    }
   }, [playbackRate, volume, setIsPlaying]);
 
   const pause = useCallback(() => {
+    if (isBismillahPlayingRef.current) {
+      bismillahAudioRef.current.pause();
+      isBismillahPlayingRef.current = false;
+    }
     audioRef.current?.pause();
     setIsPlaying(false);
     if (pauseTimerRef.current) {
@@ -200,6 +255,11 @@ export function useAudioPlayer(ayahs: AyahAudio[]): UseAudioPlayerResult {
   }, [setIsPlaying]);
 
   const stop = useCallback(() => {
+    if (isBismillahPlayingRef.current) {
+      bismillahAudioRef.current.pause();
+      bismillahAudioRef.current.currentTime = 0;
+      isBismillahPlayingRef.current = false;
+    }
     const audio = audioRef.current;
     if (audio) {
       audio.pause();

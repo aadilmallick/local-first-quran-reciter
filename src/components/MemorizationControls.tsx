@@ -15,10 +15,12 @@ export function MemorizationControls() {
     pauseBetweenAyahsMs,
     showArabic,
     showTranslation,
+    playBismillah,
     setRepeatEachAyah,
     setPauseBetweenAyahs,
     toggleShowArabic,
     toggleShowTranslation,
+    togglePlayBismillah,
   } = usePlaybackStore();
 
   return (
@@ -65,6 +67,21 @@ export function MemorizationControls() {
             </button>
           ))}
         </div>
+      </div>
+
+      {/* Bismillah toggle */}
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-stone-500 flex-1">Bismillah at start</span>
+        <button
+          onClick={togglePlayBismillah}
+          className={`px-3 py-1.5 rounded-md border text-xs font-medium transition-colors ${
+            playBismillah
+              ? "border-emerald-500 bg-emerald-50 text-emerald-700"
+              : "border-stone-200 bg-white text-stone-500 hover:bg-stone-50"
+          }`}
+        >
+          {playBismillah ? "On" : "Off"}
+        </button>
       </div>
 
       {/* Text toggles */}

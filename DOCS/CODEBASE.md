@@ -81,6 +81,7 @@ type UserPreferences = {
   pauseBetweenAyahsMs: number;
   showArabic: boolean;
   showTranslation: boolean;
+  volume: number;        // float [0, 1]; defaults to 1 for old prefs without this field
 };
 ```
 
@@ -153,6 +154,7 @@ Single store for all playback state. Initialized from `prefsStorage` on creation
 | `repeatEachAyah` | `number` | 1 |
 | `pauseBetweenAyahsMs` | `number` | 0 |
 | `playbackRate` | `number` | 1 |
+| `volume` | `number` | 1 |
 | `showArabic` | `boolean` | true |
 | `showTranslation` | `boolean` | true |
 
@@ -169,10 +171,11 @@ Single store for all playback state. Initialized from `prefsStorage` on creation
 | `setRepeatEachAyah(n)` | Persists prefs |
 | `setPauseBetweenAyahs(ms)` | Persists prefs |
 | `setPlaybackRate(rate)` | Persists prefs |
+| `setVolume(v)` | Clamps to `[0, 1]`; persists prefs |
 | `toggleShowArabic()` | Persists prefs |
 | `toggleShowTranslation()` | Persists prefs |
 
-**Persisted fields** (via `prefsStorage`): `reciterId`, `playbackRate`, `repeatEachAyah`, `pauseBetweenAyahsMs`, `showArabic`, `showTranslation`. Surah/range are not persisted.
+**Persisted fields** (via `prefsStorage`): `reciterId`, `playbackRate`, `repeatEachAyah`, `pauseBetweenAyahsMs`, `showArabic`, `showTranslation`, `volume`. Surah/range are not persisted.
 
 ---
 
@@ -279,6 +282,22 @@ function useSavedLoops(): {
 
 **Important:** `useSavedLoops` is called once in `App.tsx` and its return values passed as props to `CurrentLoopCard` and `SavedLoopsPanel`. Calling it in both components would create independent state instances that don't stay in sync.
 
+### `useKeyboardShortcuts` (`src/hooks/useKeyboardShortcuts.ts`)
+
+Registers document-level keyboard shortcuts for audio control. Called once in `App.tsx`.
+
+```ts
+function useKeyboardShortcuts(player: UseAudioPlayerResult, totalAyahs: number): void
+```
+
+| Key | Action |
+|-----|--------|
+| `Space` | Toggle play/pause |
+| `ArrowRight` | Next ayah |
+| `ArrowLeft` | Previous ayah |
+
+Skips handling when the focused element is an `INPUT`, `SELECT`, or `TEXTAREA`. Reads `isPlaying` via `usePlaybackStore.getState()` inside the handler (avoids stale closure without re-registering). Uses a `useLayoutEffect` ref for `totalAyahs` so the listener isn't re-registered when the ayah count changes.
+
 ### `useLocalStorage` (`src/hooks/useLocalStorage.ts`)
 
 Generic hook wrapping `LocalStorageBrowser` with `useState` for reactive reads. Not used directly by the main app flow (store handles persistence internally), but available for simpler use cases.
@@ -312,6 +331,8 @@ Accepts `player: UseAudioPlayerResult` and `totalAyahs: number`.
 - Progress bar: `(currentTime / duration) * 100%`
 - Current ayah label: `startAyah + currentAyahIndex`
 - Playback speed pill buttons: 0.75× 1× 1.25× 1.5×
+- Volume row: mute-toggle icon (`VolumeX` / `Volume1` / `Volume2`) + range slider `[0, 1]` with step 0.05; persisted across sessions
+- All five navigation buttons call `e.currentTarget.blur()` after their action so keyboard shortcuts remain active immediately after a click
 
 ### `MemorizationControls`
 

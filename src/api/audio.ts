@@ -5,12 +5,13 @@ import { getReciterById } from "./reciters";
 // Requests go through Vite's dev proxy (/quran-api → https://api.alquran.cloud).
 // In production, deploy a reverse proxy or serverless function and update this value.
 const BASE_URL = "/quran-api/v1";
+const baseTranslationEdition = "en.sahih";
 
 // alquran.cloud sends a different shape for the multi-edition endpoint
 const AlquranAyahSchema = z.object({
-  number: z.number(),           // global ayah number (1-6236)
+  number: z.number(), // global ayah number (1-6236)
   numberInSurah: z.number(),
-  text: z.string(),             // Arabic text
+  text: z.string(), // Arabic text
   audio: z.string().optional(), // full CDN URL for audio edition
 });
 
@@ -40,7 +41,8 @@ export async function getAyahAudioForSurah({
   const { editionIdentifier } = reciter;
   // Fetching audio + English translation (en.asad) in a single request.
   // To swap to a different translation, change "en.asad" here.
-  const url = `${BASE_URL}/surah/${surahNumber}/editions/${editionIdentifier},en.asad`;
+  const url =
+    `${BASE_URL}/surah/${surahNumber}/editions/${editionIdentifier},${baseTranslationEdition}`;
 
   let json: unknown;
   try {
@@ -52,8 +54,10 @@ export async function getAyahAudioForSurah({
   } catch (err) {
     // If this throws with a CORS or network error, add a proxy prefix to BASE_URL above.
     throw new Error(
-      `Failed to fetch audio for surah ${surahNumber}: ${err instanceof Error ? err.message : String(err)}`,
-      { cause: err }
+      `Failed to fetch audio for surah ${surahNumber}: ${
+        err instanceof Error ? err.message : String(err)
+      }`,
+      { cause: err },
     );
   }
 
@@ -67,7 +71,7 @@ export async function getAyahAudioForSurah({
     d.edition.identifier === editionIdentifier
   );
   const translationEdition = parsed.data.data.find((d) =>
-    d.edition.identifier === "en.asad"
+    d.edition.identifier === baseTranslationEdition
   );
 
   if (!audioEdition) {

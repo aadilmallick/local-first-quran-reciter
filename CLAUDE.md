@@ -11,6 +11,8 @@ typescript, and tailwindcss.
 
 **Workflow**
 
+- For information about the project, its structure, its abstractions, and more,
+  refer to DOCS/CODEBASE.md
 - Use `npm run lint` to ensure you're following react best practices
 - Use `npm run build` to ensure the build passes
 

@@ -47,4 +47,5 @@ export type UserPreferences = {
   showArabic: boolean;
   showTranslation: boolean;
   volume: number;
+  playBismillah?: boolean;
 };
