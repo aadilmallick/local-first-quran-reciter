@@ -127,18 +127,18 @@ export function useAudioPlayer(ayahs: AyahAudio[]): UseAudioPlayerResult {
         repeatCountRef.current = 0;
         if (playBismillahRef.current) {
           playBismillahThen(() => {
-            const ayah = ayahsRef.current[0];
-            const audio = audioRef.current!;
-            if (ayah) {
-              if (audio.src !== ayah.audioUrl) {
-                audio.src = ayah.audioUrl;
-                audio.load();
-              } else {
-                audio.currentTime = 0;
-              }
+            if (currentIndexRef.current === 0) {
+              // Single-ayah loop: index won't change so loading effect won't fire; play directly
+              const audio = audioRef.current!;
+              audio.currentTime = 0;
               audio.play().catch(() => setIsPlaying(false));
+            } else {
+              // Multi-ayah loop: changing the index triggers the loading effect which plays
+              // the audio. Don't call audio.play() here — doing both causes the loading
+              // effect's audio.load() to abort the first play() promise, which fires
+              // setIsPlaying(false) and breaks subsequent loop iterations.
+              setCurrentAyahIndex(0);
             }
-            setCurrentAyahIndex(0);
           });
         } else {
           setCurrentAyahIndex(0);
