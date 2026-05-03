@@ -73,17 +73,11 @@ export const usePlaybackStore = create<PlaybackState & PlaybackActions>(
     ...loadSavedPrefs(),
 
     setSelectedSurah: (surah) => {
-      const { startAyah, endAyah } = get();
-      const clamped = clampAyahRange(surah, startAyah, endAyah);
-      // If current range is invalid for new surah, reset to default
-      const validRange =
-        startAyah <= surah.ayahCount && endAyah <= surah.ayahCount
-          ? clamped
-          : defaultRangeForSurah(surah);
+      // Always reset range to the entire surah (first to last ayah) — not persisted
       set({
         selectedSurah: surah,
-        startAyah: validRange.start,
-        endAyah: validRange.end,
+        startAyah: 1,
+        endAyah: surah.ayahCount,
         currentAyahIndex: 0,
         isPlaying: false,
       });
