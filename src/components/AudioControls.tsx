@@ -6,7 +6,11 @@ import {
   SkipBack,
   SkipForward,
   Square,
+  Volume1,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
+import { useRef } from "react";
 import { usePlaybackStore } from "../store/playbackStore";
 import type { UseAudioPlayerResult } from "../hooks/useAudioPlayer";
 
@@ -23,10 +27,14 @@ export function AudioControls({ player, totalAyahs }: Props) {
     isPlaying,
     isLoopingRange,
     playbackRate,
+    volume,
     startAyah,
     toggleLoop,
     setPlaybackRate,
+    setVolume,
   } = usePlaybackStore();
+
+  const prevVolumeRef = useRef(volume > 0 ? volume : 1);
 
   const { play, pause, stop, nextAyah, prevAyah, isBuffering, currentTime, duration } = player;
 
@@ -128,6 +136,47 @@ export function AudioControls({ player, totalAyahs }: Props) {
             </button>
           ))}
         </div>
+      </div>
+
+      {/* Volume */}
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => {
+            if (volume > 0) {
+              prevVolumeRef.current = volume;
+              setVolume(0);
+            } else {
+              setVolume(prevVolumeRef.current);
+            }
+          }}
+          className="text-stone-500 hover:text-emerald-700 transition-colors flex-shrink-0"
+          title={volume === 0 ? "Unmute" : "Mute"}
+        >
+          {volume === 0 ? (
+            <VolumeX size={18} />
+          ) : volume < 0.5 ? (
+            <Volume1 size={18} />
+          ) : (
+            <Volume2 size={18} />
+          )}
+        </button>
+        <input
+          type="range"
+          min="0"
+          max="1"
+          step="0.05"
+          value={volume}
+          onChange={(e) => {
+            const v = parseFloat(e.target.value);
+            if (v > 0) prevVolumeRef.current = v;
+            setVolume(v);
+          }}
+          className="w-full accent-emerald-600 h-1.5 cursor-pointer"
+          title={`Volume ${Math.round(volume * 100)}%`}
+        />
+        <span className="text-xs text-stone-400 w-8 text-right tabular-nums">
+          {Math.round(volume * 100)}%
+        </span>
       </div>
     </div>
   );

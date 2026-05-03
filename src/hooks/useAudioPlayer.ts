@@ -22,6 +22,7 @@ export function useAudioPlayer(ayahs: AyahAudio[]): UseAudioPlayerResult {
     repeatEachAyah,
     pauseBetweenAyahsMs,
     playbackRate,
+    volume,
     setCurrentAyahIndex,
     setIsPlaying,
   } = usePlaybackStore();
@@ -63,6 +64,12 @@ export function useAudioPlayer(ayahs: AyahAudio[]): UseAudioPlayerResult {
     }
   }, [playbackRate]);
 
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = volume;
+    }
+  }, [volume]);
+
   // Load the correct audio source whenever the current ayah or ayahs array changes.
   // currentTime/duration resets are handled by the loadstart event listener below.
   useEffect(() => {
@@ -76,6 +83,7 @@ export function useAudioPlayer(ayahs: AyahAudio[]): UseAudioPlayerResult {
     audio.pause();
     audio.src = ayah.audioUrl;
     audio.playbackRate = playbackRate;
+    audio.volume = volume;
     audio.load();
 
     if (wasPlaying) {
@@ -175,11 +183,12 @@ export function useAudioPlayer(ayahs: AyahAudio[]): UseAudioPlayerResult {
     if (!audio.src || audio.src !== ayah.audioUrl) {
       audio.src = ayah.audioUrl;
       audio.playbackRate = playbackRate;
+      audio.volume = volume;
       audio.load();
     }
 
     audio.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
-  }, [playbackRate, setIsPlaying]);
+  }, [playbackRate, volume, setIsPlaying]);
 
   const pause = useCallback(() => {
     audioRef.current?.pause();

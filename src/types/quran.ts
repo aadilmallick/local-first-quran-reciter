@@ -46,4 +46,5 @@ export type UserPreferences = {
   pauseBetweenAyahsMs: number;
   showArabic: boolean;
   showTranslation: boolean;
+  volume: number;
 };

@@ -16,6 +16,7 @@ interface PlaybackState {
   repeatEachAyah: number;
   pauseBetweenAyahsMs: number;
   playbackRate: number;
+  volume: number;
   showArabic: boolean;
   showTranslation: boolean;
 }
@@ -30,6 +31,7 @@ interface PlaybackActions {
   setRepeatEachAyah: (n: number) => void;
   setPauseBetweenAyahs: (ms: number) => void;
   setPlaybackRate: (rate: number) => void;
+  setVolume: (volume: number) => void;
   toggleShowArabic: () => void;
   toggleShowTranslation: () => void;
   loadPreferences: (prefs: Partial<UserPreferences>) => void;
@@ -47,6 +49,7 @@ function loadSavedPrefs(): Partial<PlaybackState> {
       pauseBetweenAyahsMs: prefs.pauseBetweenAyahsMs,
       showArabic: prefs.showArabic,
       showTranslation: prefs.showTranslation,
+      volume: prefs.volume ?? 1,
     };
   } catch {
     return {};
@@ -68,6 +71,7 @@ export const usePlaybackStore = create<PlaybackState & PlaybackActions>(
     repeatEachAyah: 1,
     pauseBetweenAyahsMs: 0,
     playbackRate: 1,
+    volume: 1,
     showArabic: true,
     showTranslation: true,
     ...loadSavedPrefs(),
@@ -115,6 +119,11 @@ export const usePlaybackStore = create<PlaybackState & PlaybackActions>(
       persistPrefs(get());
     },
 
+    setVolume: (volume) => {
+      set({ volume: Math.min(1, Math.max(0, volume)) });
+      persistPrefs(get());
+    },
+
     toggleShowArabic: () => {
       set((s) => ({ showArabic: !s.showArabic }));
       persistPrefs(get());
@@ -136,6 +145,7 @@ export const usePlaybackStore = create<PlaybackState & PlaybackActions>(
         ...(prefs.pauseBetweenAyahsMs !== undefined ? { pauseBetweenAyahsMs: prefs.pauseBetweenAyahsMs } : {}),
         ...(prefs.showArabic !== undefined ? { showArabic: prefs.showArabic } : {}),
         ...(prefs.showTranslation !== undefined ? { showTranslation: prefs.showTranslation } : {}),
+      ...(prefs.volume !== undefined ? { volume: prefs.volume } : {}),
       });
     },
   })
@@ -150,6 +160,7 @@ function persistPrefs(state: PlaybackState) {
       pauseBetweenAyahsMs: state.pauseBetweenAyahsMs,
       showArabic: state.showArabic,
       showTranslation: state.showTranslation,
+      volume: state.volume,
     });
   } catch {
     // localStorage unavailable — silently skip

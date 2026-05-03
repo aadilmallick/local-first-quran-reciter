@@ -1,0 +1,20 @@
+This is the local first quran reciter project, made with react, vite,
+typescript, and tailwindcss.
+
+**Libraries to use**
+
+- Zustand for state management
+- Zod for runtime validation
+- Tanstack query for data fetching
+- TailwindCSS for styling
+- Lucide for icons
+
+**Workflow**
+
+- Use `npm run lint` to ensure you're following react best practices
+- Use `npm run build` to ensure the build passes
+
+**Best practices to follow**
+
+- Follow the principle of separation of concerns
+- Keep the code clean and modular
